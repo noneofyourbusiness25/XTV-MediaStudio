@@ -122,6 +122,13 @@ def get_user_templates_menu():
         ]
     )
 
+
+def _is_allowed(user_id):
+    from config import Config
+    if is_public_mode():
+        return True
+    return user_id == Config.CEO_ID or user_id in Config.ADMIN_IDS
+
 def is_public_mode():
     return Config.PUBLIC_MODE
 
@@ -197,7 +204,7 @@ async def info_command(client, message):
 
 @Client.on_message(filters.command("settings") & filters.private)
 async def settings_panel(client, message):
-    if not is_public_mode():
+    if not _is_allowed(message.from_user.id):
         return
 
     await message.reply_text(
@@ -221,7 +228,7 @@ debug("✅ Loaded handler: user_settings_callback")
 )
 async def user_settings_callback(client, callback_query):
     await callback_query.answer()
-    if not is_public_mode():
+    if not _is_allowed(callback_query.from_user.id):
         raise ContinuePropagation
 
     user_id = callback_query.from_user.id
@@ -1164,7 +1171,7 @@ async def user_settings_callback(client, callback_query):
 
 @Client.on_message(filters.photo & filters.private, group=2)
 async def handle_user_photo(client, message):
-    if not is_public_mode():
+    if not _is_allowed(message.from_user.id):
         raise ContinuePropagation
 
     user_id = message.from_user.id
@@ -1223,7 +1230,7 @@ async def edit_or_reply(client, message, msg_id, text, reply_markup=None, disabl
     group=2,
 )
 async def handle_user_text(client, message):
-    if not is_public_mode():
+    if not _is_allowed(message.from_user.id):
         raise ContinuePropagation
 
     user_id = message.from_user.id

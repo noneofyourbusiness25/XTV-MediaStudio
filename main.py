@@ -33,7 +33,10 @@ from utils.telegram.fast_download import fast_download
 async def custom_save_file(self, path, file_id=None, file_part=0, progress=None, progress_args=()):
     import os
     if isinstance(path, str) and os.path.exists(path):
-        return await fast_upload(self, path, progress, progress_args)
+        res = await fast_upload(self, path, progress, progress_args)
+        if isinstance(res, str) and res == path:
+            return await original_save_file(self, path, file_id, file_part, progress, progress_args)
+        return res
     else:
         # fallback to original
         return await original_save_file(self, path, file_id, file_part, progress, progress_args)

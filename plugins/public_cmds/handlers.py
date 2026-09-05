@@ -425,6 +425,53 @@ async def user_settings_callback(client, callback_query):
             await globals()["user_settings_callback"](client, callback_query)
             return
 
+
+    if data.startswith("source_channels_"):
+        if data == "source_channels_menu":
+            channels = await db.get_source_channels(user_id)
+
+            text = (
+                "📡 **Manage Source Channels**\n"
+                "━━━━━━━━━━━━━━━━━━━━\n"
+                "> Configure channels the bot monitors to auto-process new files.\n\n"
+            )
+
+            if not channels:
+                text += "❌ __No Source Channels configured yet.__\n\n"
+
+            buttons = [[InlineKeyboardButton("➕ Add New Source Channel", callback_data="source_channels_add")]]
+
+            if channels:
+                for ch_id, ch_name in channels.items():
+                    buttons.append(
+                        [InlineKeyboardButton(f"🗑 {ch_name}", callback_data=f"source_channels_del_{ch_id}")]
+                    )
+
+            buttons.append([InlineKeyboardButton("← Back to Settings", callback_data="user_settings")])
+
+            with contextlib.suppress(MessageNotModified):
+                await callback_query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+            return
+
+        elif data == "source_channels_add":
+            user_sessions[user_id] = {"state": "awaiting_source_channel", "msg_id": callback_query.message.id}
+            with contextlib.suppress(MessageNotModified):
+                await callback_query.message.edit_text(
+                    "➕ **Add Source Channel**\n\n"
+                    "Forward a message from the target channel, or send its ID / username.\n\n"
+                    "__(Ensure the bot is added as an admin with read access)__",
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="source_channels_menu")]])
+                )
+            return
+
+        elif data.startswith("source_channels_del_"):
+            ch_id = data.replace("source_channels_del_", "")
+            await db.remove_source_channel(ch_id, user_id)
+            await callback_query.answer("Source channel removed.", show_alert=True)
+            callback_query.data = "source_channels_menu"
+            await user_settings_callback(client, callback_query)
+            return
+
     if data == "user_dumb_channels":
         callback_query.data = "dumb_user_menu"
         await globals()["user_settings_callback"](client, callback_query)

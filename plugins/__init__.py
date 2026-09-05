@@ -6,3 +6,6 @@
 # Backup Channel @XTVhome
 # Contact on Telegram @davdxpx
 # --------------------------------------------------------------------------
+
+
+from plugins import auto_process  # noqa: F401

@@ -5,6 +5,7 @@ import logging
 from typing import Optional, Callable
 from pyrogram import Client, raw
 from pyrogram.errors import FloodWait
+from pyrogram.methods.messages.inline_session import get_session
 
 logger = logging.getLogger("FastUpload")
 
@@ -30,7 +31,7 @@ async def fast_upload(
     file_id = client.rnd_id()
 
     dc_id = await client.storage.dc_id()
-    session = await client.get_session(dc_id, is_media=True)
+    session = await get_session(client, dc_id)
 
     uploaded = 0
 

@@ -79,9 +79,12 @@ def get_user_main_menu():
             ],
             [
                 InlineKeyboardButton("📺 Channels", callback_data="dumb_user_menu"),
-                InlineKeyboardButton("⚙️ General", callback_data="user_general_settings_menu"),
+                InlineKeyboardButton("📡 Source Channels", callback_data="source_channels_menu"),
             ],
-            [InlineKeyboardButton("☁️ Mirror-Leech", callback_data="ml_cfg")],
+            [
+                InlineKeyboardButton("⚙️ General", callback_data="user_general_settings_menu"),
+                InlineKeyboardButton("☁️ Mirror-Leech", callback_data="ml_cfg")
+            ],
             [
                 InlineKeyboardButton("📊 Your Stats", callback_data="user_stats"),
                 InlineKeyboardButton("👀 View Current Config", callback_data="user_view"),
@@ -223,7 +226,7 @@ debug("✅ Loaded handler: user_settings_callback")
 
 @Client.on_callback_query(
     filters.regex(
-        r"^(user_|edit_user_template_|edit_user_fn_template_|edit_user_sys_template_|prompt_user_.*|dumb_user_|set_lang_|set_user_workflow_|set_thumb_mode_|user_delete_msg)"
+        r"^(user_|edit_user_template_|edit_user_fn_template_|edit_user_sys_template_|prompt_user_.*|dumb_user_|source_channels_|set_lang_|set_user_workflow_|set_thumb_mode_|user_delete_msg)"
     )
 )
 async def user_settings_callback(client, callback_query):

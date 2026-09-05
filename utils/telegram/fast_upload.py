@@ -33,6 +33,8 @@ async def fast_upload(
     dc_id = await client.storage.dc_id()
     session = await get_session(client, dc_id)
 
+    logger.info(f"Fast Upload starting for {file_size} bytes")
+
     uploaded = 0
 
     queue = asyncio.Queue()

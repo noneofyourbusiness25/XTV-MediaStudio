@@ -104,12 +104,16 @@ async def probe_audio_streams(filepath, timeout=20):
     }
     langs.discard("")
     langs.discard("und")
+
+    from utils.media.ffmpeg_tools import get_language_name
+
+    full_langs = [get_language_name(l) for l in langs if l]
+
     if count >= 3:
-        return "Multi"
+        return " | ".join(full_langs) if full_langs else "Multi"
     if count == 2:
-        # If tags disagree OR missing, treat as DUAL (the common case for 2 audio tracks).
-        return "DUAL"
-    return None
+        return " | ".join(full_langs) if full_langs else "DUAL"
+    return full_langs[0] if full_langs else None
 
 
 def apply_autofill(fs):

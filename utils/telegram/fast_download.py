@@ -83,6 +83,9 @@ async def fast_download(
         temp_file_name = file_name + ".temp"
 
         session = await get_session(client, dc_id)
+
+        logger.info(f"Fast Download starting for {file_size} bytes")
+
         downloaded = 0
         queue = asyncio.Queue()
         for i in range(total_parts):

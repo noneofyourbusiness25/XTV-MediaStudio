@@ -32,24 +32,38 @@ from utils.telegram.fast_download import fast_download
 # Monkey patch pyrogram.Client.save_file to use fast_upload
 async def custom_save_file(self, path, file_id=None, file_part=0, progress=None, progress_args=()):
     import os
+    import logging
+    _log = logging.getLogger("main.custom_save_file")
     if isinstance(path, str) and os.path.exists(path):
-        res = await fast_upload(self, path, progress, progress_args)
-        if isinstance(res, str) and res == path:
+        try:
+            res = await fast_upload(self, path, progress, progress_args)
+            # If fast_upload returns the original path string, it implies it declined to fast-upload (e.g. file too small)
+            if isinstance(res, str) and res == path:
+                _log.debug(f"fast_upload declined to upload '{path}' (likely too small), falling back to Pyrogram.")
+                return await original_save_file(self, path, file_id, file_part, progress, progress_args)
+            return res
+        except Exception as e:
+            _log.warning(f"fast_upload encountered an error: {e}. Falling back cleanly to Pyrogram original_save_file.")
             return await original_save_file(self, path, file_id, file_part, progress, progress_args)
-        return res
     else:
         # fallback to original
+        _log.debug(f"path '{path}' is not a valid local file for fast_upload. Falling back to Pyrogram.")
         return await original_save_file(self, path, file_id, file_part, progress, progress_args)
 
 original_save_file = pyrogram.Client.save_file
 pyrogram.Client.save_file = custom_save_file
 
 async def custom_download_media(self, message, file_name="downloads/", in_memory=False, block=True, progress=None, progress_args=()):
-    if not in_memory and getattr(message, "document", None) or getattr(message, "video", None) or getattr(message, "audio", None):
+    import logging
+    _log = logging.getLogger("main.custom_download_media")
+    # Only use fast_download if saving to disk and message has media
+    if not in_memory and (getattr(message, "document", None) or getattr(message, "video", None) or getattr(message, "audio", None)):
         try:
             return await fast_download(self, message, file_name, progress, progress_args)
         except Exception as e:
+            _log.warning(f"fast_download encountered an error: {e}. Falling back cleanly to Pyrogram original_download_media.")
             return await original_download_media(self, message, file_name, in_memory, block, progress, progress_args)
+    _log.debug("Media not suitable for fast_download (e.g., in_memory or not doc/vid/audio). Falling back.")
     return await original_download_media(self, message, file_name, in_memory, block, progress, progress_args)
 
 original_download_media = pyrogram.Client.download_media

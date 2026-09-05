@@ -6,6 +6,7 @@ from typing import Optional, Callable
 from pyrogram import Client, raw, utils
 from pyrogram.file_id import FileId, FileType, ThumbnailSource
 from pyrogram.errors import FloodWait
+from pyrogram.methods.messages.inline_session import get_session
 
 logger = logging.getLogger("FastDownload")
 
@@ -81,7 +82,7 @@ async def fast_download(
         os.makedirs(os.path.dirname(os.path.abspath(file_name)), exist_ok=True)
         temp_file_name = file_name + ".temp"
 
-        session = await client.get_session(dc_id, is_media=True)
+        session = await get_session(client, dc_id)
         downloaded = 0
         queue = asyncio.Queue()
         for i in range(total_parts):

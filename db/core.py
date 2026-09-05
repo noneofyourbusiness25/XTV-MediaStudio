@@ -422,6 +422,77 @@ class Database:
             return settings.get("dumb_channels", {})
         return {}
 
+
+    async def get_all_source_channels_map(self):
+        if self.settings is None:
+            return {}
+        result = {}
+        try:
+            async for doc in self.settings.find({"source_channels": {"$exists": True}}):
+                user_id = doc.get("user_id") or doc.get("_id") # some setups use _id as user_id, some have user_id field.
+
+                # In db/core.py, user_id is often part of personal_settings or the document is per user.
+                # Since public mode settings _get_doc_id(user_id) usually returns f"user_{user_id}" or similar.
+                if str(user_id).startswith("user_"):
+                    user_id = int(str(user_id).replace("user_", ""))
+                elif user_id == "global_settings":
+                    from config import Config
+                    user_id = Config.CEO_ID or list(Config.ADMIN_IDS)[0] if Config.ADMIN_IDS else None
+
+                if not user_id: continue
+
+                source_channels = doc.get("source_channels", {})
+                for ch_id in source_channels.keys():
+                    try:
+                        result[int(ch_id)] = user_id
+                    except:
+                        result[ch_id] = user_id
+        except Exception as e:
+            from utils.telegram.log import get_logger
+            logger = get_logger("DB")
+            logger.error(f"Error getting all source channels map: {e}")
+        return result
+
+    async def add_source_channel(self, channel_id, channel_name, invite_link=None, user_id=None):
+        if self.settings is None:
+            return
+        doc_id = self._get_doc_id(user_id)
+        try:
+            update_data = {f"source_channels.{channel_id}": channel_name}
+            if invite_link:
+                update_data[f"source_channel_links.{channel_id}"] = invite_link
+
+            await self.settings.update_one(
+                {"_id": doc_id}, {"$set": update_data}, upsert=True
+            )
+        except Exception as e:
+            logger.error(f"Error adding source channel for {doc_id}: {e}")
+
+    async def get_source_channels(self, user_id=None):
+        if self.settings is None:
+            return {}
+        doc_id = self._get_doc_id(user_id)
+        try:
+            doc = await self.settings.find_one({"_id": doc_id})
+            if doc and "source_channels" in doc:
+                return doc["source_channels"]
+            return {}
+        except Exception as e:
+            logger.error(f"Error getting source channels for {doc_id}: {e}")
+            return {}
+
+    async def remove_source_channel(self, channel_id, user_id=None):
+        if self.settings is None:
+            return
+        doc_id = self._get_doc_id(user_id)
+        try:
+            await self.settings.update_one(
+                {"_id": doc_id},
+                {"$unset": {f"source_channels.{channel_id}": "", f"source_channel_links.{channel_id}": ""}}
+            )
+        except Exception as e:
+            logger.error(f"Error removing source channel for {doc_id}: {e}")
+
     async def add_dumb_channel(
         self, channel_id, channel_name, invite_link=None, user_id=None
     ):

@@ -25,6 +25,35 @@ import time
 
 from pyrogram import Client, idle
 
+import pyrogram
+from utils.telegram.fast_upload import fast_upload
+from utils.telegram.fast_download import fast_download
+
+# Monkey patch pyrogram.Client.save_file to use fast_upload
+async def custom_save_file(self, path, file_id=None, file_part=0, progress=None, progress_args=()):
+    import os
+    if isinstance(path, str) and os.path.exists(path):
+        return await fast_upload(self, path, progress, progress_args)
+    else:
+        # fallback to original
+        return await original_save_file(self, path, file_id, file_part, progress, progress_args)
+
+original_save_file = pyrogram.Client.save_file
+pyrogram.Client.save_file = custom_save_file
+
+async def custom_download_media(self, message, file_name="downloads/", in_memory=False, block=True, progress=None, progress_args=()):
+    if not in_memory and getattr(message, "document", None) or getattr(message, "video", None) or getattr(message, "audio", None):
+        try:
+            return await fast_download(self, message, file_name, progress, progress_args)
+        except Exception as e:
+            return await original_download_media(self, message, file_name, in_memory, block, progress, progress_args)
+    return await original_download_media(self, message, file_name, in_memory, block, progress, progress_args)
+
+original_download_media = pyrogram.Client.download_media
+pyrogram.Client.download_media = custom_download_media
+
+
+
 from config import Config
 from utils.tasks import spawn
 from utils.telegram.log import get_logger

@@ -33,10 +33,25 @@ async def auto_process_source(client: Client, message: Message):
         # Route to processing pipeline on behalf of user
         logger.info(f"Auto-processing new file from source channel {chat_id} for user {user_id}")
 
+
         from pyrogram.types import User
         # Mocking user to avoid API call failures for cached users
         message.from_user = User(id=user_id, is_self=False, is_bot=False, first_name="Auto", is_contact=False, is_mutual_contact=False, is_deleted=False, is_verified=False, is_restricted=False, is_scam=False, is_fake=False, is_support=False, is_premium=True)
         message.chat.id = user_id
+
+        # Monkey patch reply_text so bot talks to the user who configured it instead of the source channel
+        original_reply = message.reply_text
+        async def custom_reply(*args, **kwargs):
+            kwargs.pop('quote', None)
+            kwargs['chat_id'] = user_id
+            try:
+                return await client.send_message(*args, **kwargs)
+            except Exception as e:
+                logger.error(f"Failed to send auto-process status to {user_id}: {e}")
+                return await original_reply(*args, **kwargs)
+
+        message.reply_text = custom_reply
+
 
         from plugins.flow.upload import handle_file_upload
         # Forward it to the flow logic
